@@ -281,7 +281,7 @@ export default function TranslationSystem() {
           <h2 className="text-xl font-semibold mb-2">4. Output JSON</h2>
           <pre className="bg-gray-100 p-4 rounded overflow-x-auto max-h-96 font-mono">
 
-            {isProcessing && outputJson}
+            {outputJson}
           </pre>
           <button
             onClick={() => {
