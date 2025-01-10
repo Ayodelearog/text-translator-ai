@@ -21,13 +21,13 @@ export async function POST(req: Request) {
     }
 
     const response = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: "gpt-3.5-turbo",
       messages: [
-        { role: "system", content: "You are a professional translator." },
-        { role: "user", content: `Translate the following text to ${targetLanguage}: "${text}"` }
+        { role: "system", content: "You are a precise translation tool. Translate the given text to the target language. Provide ONLY the direct translation without explanations, quotes, or additional context." },
+        { role: "user", content: `Translate the following text to ${targetLanguage}:\n\n${text}` }
       ],
-      temperature: 1,
-      max_tokens: 8075,
+      temperature: 0.3,
+      max_tokens: 100,
     });
 
     const translatedText = response.choices[0].message.content?.trim();

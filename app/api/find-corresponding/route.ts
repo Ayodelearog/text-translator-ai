@@ -20,28 +20,34 @@ export async function POST(req: Request) {
       );
     }
 
-    const prompt = `Given the following translated phrase in ${targetLanguage}:
-"${fullTranslatedPhrase}"
+    const prompt = `You are a precise translation tool. Your task is to find the exact corresponding translation in the target language.
 
-Which portion of this ${targetLanguage} phrase corresponds to the following English fragment:
-"${originalFragment}"
+Given:
+- Full translated phrase in ${targetLanguage}: "${fullTranslatedPhrase}"
+- Original English fragment: "${originalFragment}"
 
-Please respond with ONLY the corresponding ${targetLanguage} fragment, without any additional explanation or punctuation.`;
+Respond with ONLY the exact portion of the ${targetLanguage} phrase that corresponds to the English fragment. Do not add any explanations, punctuation, or additional text.
+
+If the exact corresponding translation cannot be found, respond with "TRANSLATION_NOT_FOUND".`;
 
     const response = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: "gpt-3.5-turbo",
       messages: [
-        { role: "system", content: "You are a professional translator assistant." },
+        { role: "system", content: "You are a professional translator assistant focused on precise fragment matching." },
         { role: "user", content: prompt }
       ],
-      temperature: 1,
-      max_tokens: 8075,
+      temperature: 0.3,
+      max_tokens: 100,
     });
 
     const correspondingTranslation = response.choices[0].message.content?.trim();
 
     if (!correspondingTranslation) {
       throw new Error('OpenAI API returned empty response');
+    }
+
+    if (correspondingTranslation === "TRANSLATION_NOT_FOUND") {
+      return NextResponse.json({ correspondingTranslation: null });
     }
 
     return NextResponse.json({ correspondingTranslation });

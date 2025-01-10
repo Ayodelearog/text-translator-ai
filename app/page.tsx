@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useCallback, useMemo } from "react"
+import { useState, useRef, useCallback } from "react"
 import { throttle } from 'lodash'
 
 interface Change {
@@ -9,6 +9,7 @@ interface Change {
   bold?: boolean
   italic?: boolean
   link?: string
+  underline?: boolean
 }
 
 interface TranslationItem {
@@ -56,33 +57,14 @@ export default function TranslationSystem() {
     return data.translatedText
   }, [])
 
-  // const throttledTranslateText = useCallback(
-  //   throttle((text: string, targetLanguage: string, callback: (result: string) => void) => {
-  //     translateText(text, targetLanguage)
-  //       .then(callback)
-  //       .catch((error) => console.error("Translation error:", error))
-  //   }, 1000),
-  //   [translateText]
-  // )
-
-  const memoizedTranslateText = useCallback((text: string, targetLanguage: string) => {
-    return translateText(text, targetLanguage);
-  }, [translateText]); // Add translateText as a dependency
-
-  const throttledTranslateText = useMemo(
-    () =>
-      throttle(
-        (text: string, targetLanguage: string, callback: (result: string) => void) => {
-          memoizedTranslateText(text, targetLanguage)
-            .then(callback)
-            .catch((error) => console.error("Translation error:", error));
-        },
-        1000
-      ),
-    [memoizedTranslateText]
-  );
-
-  
+  const throttledTranslateText = useCallback(
+    throttle((text: string, targetLanguage: string, callback: (result: string) => void) => {
+      translateText(text, targetLanguage)
+        .then(callback)
+        .catch((error) => console.error("Translation error:", error))
+    }, 1000),
+    [translateText]
+  )
 
   const findCorrespondingTranslation = useCallback(async (
     fullTranslatedPhrase: string,
@@ -106,20 +88,10 @@ export default function TranslationSystem() {
     return data.correspondingTranslation
   }, [])
 
-  function applyFormatting(text: string, changes: Change[]): string {
-    let formattedText = text
-    changes.forEach(change => {
-      const index = formattedText.indexOf(change.translated)
-      if (index !== -1) {
-        let formattedChange = change.translated
-        if (change.bold) formattedChange = `<b>${formattedChange}</b>`
-        if (change.italic) formattedChange = `<i>${formattedChange}</i>`
-        if (change.link) formattedChange = `<a href="${change.link}">${formattedChange}</a>`
-        formattedText = formattedText.slice(0, index) + formattedChange + formattedText.slice(index + change.translated.length)
-      }
-    })
-    return formattedText
-  }
+  // const cleanTranslation = (text: string): string => {
+  //   // Remove any surrounding quotes and unescape internal quotes
+  //   return text.replace(/^["']|["']$/g, '').replace(/\\"/g, '"')
+  // }
 
   const processTranslations = async () => {
     setIsProcessing(true)
@@ -147,6 +119,8 @@ export default function TranslationSystem() {
               throttledTranslateText(item.original, targetLanguage, resolve)
             })
 
+            // const cleanedTranslation = cleanTranslation(translatedText)
+
             const translatedItem: TranslationItem = {
               ...item,
               translated: translatedText,
@@ -159,11 +133,11 @@ export default function TranslationSystem() {
                   return {
                     ...change,
                     translated: translatedChange,
+                    // translated: cleanTranslation(translatedChange),
                   }
                 })
               )
               translatedItem.changes = translatedChanges
-              translatedItem.translated = applyFormatting(translatedText, translatedChanges)
             }
 
             translatedData.phrases.push(translatedItem)
@@ -213,7 +187,6 @@ export default function TranslationSystem() {
       } catch (err) {
         setError("Invalid JSON file")
         setInputJson("")
-        console.log(err)
       }
     }
     reader.onerror = () => {
@@ -280,7 +253,6 @@ export default function TranslationSystem() {
         <div>
           <h2 className="text-xl font-semibold mb-2">4. Output JSON</h2>
           <pre className="bg-gray-100 p-4 rounded overflow-x-auto max-h-96 font-mono">
-
             {outputJson}
           </pre>
           <button
