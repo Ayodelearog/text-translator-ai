@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useCallback } from "react"
+import { useState, useRef, useCallback, useMemo } from "react"
 import { throttle } from 'lodash'
 
 interface Change {
@@ -57,14 +57,22 @@ export default function TranslationSystem() {
     return data.translatedText
   }, [])
 
-  const throttledTranslateText = useCallback(
-    throttle((text: string, targetLanguage: string, callback: (result: string) => void) => {
-      translateText(text, targetLanguage)
-        .then(callback)
-        .catch((error) => console.error("Translation error:", error))
-    }, 1000),
-    [translateText]
-  )
+  const memoizedTranslateText = useCallback((text: string, targetLanguage: string) => {
+    return translateText(text, targetLanguage);
+  }, [translateText]); // Add translateText as a dependency
+
+  const throttledTranslateText = useMemo(
+    () =>
+      throttle(
+        (text: string, targetLanguage: string, callback: (result: string) => void) => {
+          memoizedTranslateText(text, targetLanguage)
+            .then(callback)
+            .catch((error) => console.error("Translation error:", error));
+        },
+        1000
+      ),
+    [memoizedTranslateText]
+  );
 
   const findCorrespondingTranslation = useCallback(async (
     fullTranslatedPhrase: string,
@@ -88,10 +96,7 @@ export default function TranslationSystem() {
     return data.correspondingTranslation
   }, [])
 
-  // const cleanTranslation = (text: string): string => {
-  //   // Remove any surrounding quotes and unescape internal quotes
-  //   return text.replace(/^["']|["']$/g, '').replace(/\\"/g, '"')
-  // }
+  
 
   const processTranslations = async () => {
     setIsProcessing(true)
@@ -119,7 +124,7 @@ export default function TranslationSystem() {
               throttledTranslateText(item.original, targetLanguage, resolve)
             })
 
-            // const cleanedTranslation = cleanTranslation(translatedText)
+            
 
             const translatedItem: TranslationItem = {
               ...item,
@@ -133,7 +138,7 @@ export default function TranslationSystem() {
                   return {
                     ...change,
                     translated: translatedChange,
-                    // translated: cleanTranslation(translatedChange),
+                    
                   }
                 })
               )
@@ -187,6 +192,7 @@ export default function TranslationSystem() {
       } catch (err) {
         setError("Invalid JSON file")
         setInputJson("")
+        console.log(err)
       }
     }
     reader.onerror = () => {
